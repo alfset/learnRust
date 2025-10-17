@@ -1,8 +1,8 @@
 use std::io;
 
 trait Account {
-    fn deposit(&mut self, amount: f64);
-    fn withdraw(&mut self, amount: f64);
+    fn deposit(&mut self, amount: f64) -> Result<(), String>;
+    fn withdraw(&mut self, amount: f64) -> Result<(), String>;
     fn balance(&self) -> f64;
 }
 
@@ -13,27 +13,36 @@ struct BankAccount {
 }
 
 impl Account for BankAccount {
-    fn deposit(&mut self, amount: f64) {
+    fn deposit(&mut self, amount: f64) -> Result<(), String> {
+        if amount <= 0.0 {
+            return Err("Deposit amount must be greater than zero.".to_string());
+        }
+
         self.balance += amount;
         println!(
             "Deposited ${:.2} into account {} ({}) — New balance: ${:.2}",
             amount, self.account_number, self.holder_name, self.balance
         );
+        Ok(())
     }
 
-    fn withdraw(&mut self, amount: f64) {
-        if amount <= self.balance {
-            self.balance -= amount;
-            println!(
-                "Withdrew ${:.2} from account {} ({}) — New balance: ${:.2}",
-                amount, self.account_number, self.holder_name, self.balance
-            );
-        } else {
-            println!(
+    fn withdraw(&mut self, amount: f64) -> Result<(), String> {
+        if amount <= 0.0 {
+            return Err("Withdrawal amount must be greater than zero.".to_string());
+        }
+        if amount > self.balance {
+            return Err(format!(
                 "Insufficient funds in account {} ({}). Current balance: ${:.2}",
                 self.account_number, self.holder_name, self.balance
-            );
+            ));
         }
+
+        self.balance -= amount;
+        println!(
+            "Withdrew ${:.2} from account {} ({}) — New balance: ${:.2}",
+            amount, self.account_number, self.holder_name, self.balance
+        );
+        Ok(())
     }
 
     fn balance(&self) -> f64 {
@@ -62,7 +71,7 @@ fn main() {
         println!("3. Check Balance");
         println!("4. List Accounts");
         println!("5. Exit");
-        println!("Choose an option (1-5):");
+        print!("Choose an option (1-5): ");
 
         let mut choice = String::new();
         io::stdin().read_line(&mut choice).expect("Failed to read input");
@@ -75,7 +84,10 @@ fn main() {
                     let mut amount_input = String::new();
                     io::stdin().read_line(&mut amount_input).expect("Failed to read input");
                     if let Ok(amount) = amount_input.trim().parse::<f64>() {
-                        account.deposit(amount);
+                        match account.deposit(amount) {
+                            Ok(_) => println!("Deposit successful!"),
+                            Err(e) => println!("Error: {}", e),
+                        }
                     } else {
                         println!("Invalid amount entered.");
                     }
@@ -87,7 +99,10 @@ fn main() {
                     let mut amount_input = String::new();
                     io::stdin().read_line(&mut amount_input).expect("Failed to read input");
                     if let Ok(amount) = amount_input.trim().parse::<f64>() {
-                        account.withdraw(amount);
+                        match account.withdraw(amount) {
+                            Ok(_) => println!("Withdrawal successful!"),
+                            Err(e) => println!("Error: {}", e),
+                        }
                     } else {
                         println!("Invalid amount entered.");
                     }
@@ -121,7 +136,6 @@ fn main() {
     }
 }
 
-/// Helper function to select an account by account number
 fn select_account<'a>(accounts: &'a mut Vec<BankAccount>) -> Option<&'a mut BankAccount> {
     println!("Enter account number:");
     let mut acc_input = String::new();
